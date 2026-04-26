@@ -10,6 +10,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// PLAYER
 let player = {
   x: 100,
   y: 100,
@@ -18,25 +19,55 @@ let player = {
   vx: 0,
   vy: 0,
   speed: 5,
-  jumping: false
+  jumping: false,
+  onWall: false,
+  facing: 1
 };
 
 let gravity = 0.5;
 let keys = {};
 
-let groundY = 350;
+// LEVEL
+let platforms = [
+  {x: 0, y: 400, w: canvas.width, h: 50},
+  {x: 300, y: 300, w: 200, h: 20},
+  {x: 600, y: 250, w: 20, h: 200}, // wall
+  {x: 900, y: 200, w: 200, h: 20}
+];
+
+// ENEMIES
+let enemies = [
+  {x: 500, y: 360, w: 40, h: 40, alive: true},
+  {x: 950, y: 160, w: 40, h: 40, alive: true}
+];
 
 window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
+function collide(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
 function update() {
   player.vx = 0;
+  player.onWall = false;
 
-  if (keys["a"]) player.vx = -player.speed;
-  if (keys["d"]) player.vx = player.speed;
+  if (keys["a"]) {
+    player.vx = -player.speed;
+    player.facing = -1;
+  }
+  if (keys["d"]) {
+    player.vx = player.speed;
+    player.facing = 1;
+  }
 
   if (keys[" "] && !player.jumping) {
-    player.vy = -10;
+    player.vy = -11;
     player.jumping = true;
   }
 
@@ -45,11 +76,52 @@ function update() {
   player.x += player.vx;
   player.y += player.vy;
 
-  // simple ground collision (SAFE)
-  if (player.y + player.h > groundY) {
-    player.y = groundY - player.h;
+  // PLATFORM COLLISION
+  platforms.forEach(p => {
+    if (collide(player, p)) {
+      // landing
+      if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.jumping = false;
+      }
+
+      // wall run
+      if (
+        player.x + player.w > p.x &&
+        player.x < p.x + p.w &&
+        keys["w"] &&
+        Math.abs(p.w) < 50 // vertical wall
+      ) {
+        player.vy = -2;
+        player.onWall = true;
+      }
+    }
+  });
+
+  // KILL ENEMIES (jump on them or press E near them)
+  enemies.forEach(e => {
+    if (!e.alive) return;
+
+    if (collide(player, e)) {
+      // stomp
+      if (player.vy > 0) {
+        e.alive = false;
+        player.vy = -8;
+      }
+
+      // attack key
+      if (keys["e"]) {
+        e.alive = false;
+      }
+    }
+  });
+
+  // reset if fall
+  if (player.y > canvas.height) {
+    player.x = 100;
+    player.y = 100;
     player.vy = 0;
-    player.jumping = false;
   }
 }
 
@@ -58,28 +130,34 @@ function draw() {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // platforms
+  ctx.fillStyle = "gray";
+  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
   // player
-  ctx.fillStyle = "white";
+  ctx.fillStyle = player.onWall ? "cyan" : "white";
   ctx.fillRect(player.x, player.y, player.w, player.h);
 
-  // ground
-  ctx.fillStyle = "gray";
-  ctx.fillRect(0, groundY, canvas.width, 50);
+  // enemies
+  enemies.forEach(e => {
+    if (e.alive) {
+      ctx.fillStyle = "red";
+      ctx.fillRect(e.x, e.y, e.w, e.h);
+    }
+  });
 }
 
-function gameLoop() {
+function loop() {
   try {
     update();
     draw();
   } catch (e) {
-    console.error("GAME ERROR:", e);
+    console.error(e);
   }
-
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
 }
 
-gameLoop();
+loop();
 </script>
-
 </body>
 </html>
