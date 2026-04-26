@@ -1,20 +1,95 @@
-<!DOCTYPE html>
-<html>
-<body style="margin:0;background:black;">
-<canvas id="game"></canvas>
-
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-ctx.fillStyle = "white";
-ctx.fillRect(100, 100, 100, 100);
+let player = {
+  x: 100,
+  y: 100,
+  w: 40,
+  h: 40,
+  vx: 0,
+  vy: 0,
+  speed: 5,
+  jumping: false,
+  wallRunning: false
+};
 
-console.log("GAME IS RUNNING");
+let gravity = 0.5;
+let keys = {};
+
+let walls = [
+  {x: 0, y: 350, w: canvas.width, h: 50},
+  {x: 400, y: 200, w: 20, h: 200},
+  {x: 700, y: 150, w: 20, h: 250}
+];
+
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+function update() {
+  player.vx = 0;
+
+  if (keys['a']) player.vx = -player.speed;
+  if (keys['d']) player.vx = player.speed;
+
+  if (keys[' '] && !player.jumping) {
+    player.vy = -10;
+    player.jumping = true;
+  }
+
+  player.vy += gravity;
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // STOP falling forever
+  if (player.y > canvas.height) {
+    player.y = 100;
+    player.vy = 0;
+  }
+
+  walls.forEach(w => {
+    if (
+      player.x < w.x + w.w &&
+      player.x + player.w > w.x &&
+      player.y < w.y + w.h &&
+      player.y + player.h > w.y
+    ) {
+      if (player.vy > 0) {
+        player.y = w.y - player.h;
+        player.vy = 0;
+        player.jumping = false;
+      }
+    }
+  });
+}
+
+function draw() {
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Player
+  ctx.fillStyle = "white";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  // Walls
+  ctx.fillStyle = "gray";
+  walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+}
+
+function gameLoop() {
+  try {
+    update();
+    draw();
+  } catch (e) {
+    console.error("GAME CRASHED:", e);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
 </script>
-
-</body>
-</html>
