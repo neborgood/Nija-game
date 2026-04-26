@@ -10,31 +10,75 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let y = 0;
+let player = {
+  x: 100,
+  y: 100,
+  w: 40,
+  h: 40,
+  vx: 0,
+  vy: 0,
+  speed: 5,
+  jumping: false
+};
+
+let gravity = 0.5;
+let keys = {};
+
+let groundY = 350;
+
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+function update() {
+  player.vx = 0;
+
+  if (keys["a"]) player.vx = -player.speed;
+  if (keys["d"]) player.vx = player.speed;
+
+  if (keys[" "] && !player.jumping) {
+    player.vy = -10;
+    player.jumping = true;
+  }
+
+  player.vy += gravity;
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // simple ground collision (SAFE)
+  if (player.y + player.h > groundY) {
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.jumping = false;
+  }
+}
+
+function draw() {
+  // background
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // player
+  ctx.fillStyle = "white";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  // ground
+  ctx.fillStyle = "gray";
+  ctx.fillRect(0, groundY, canvas.width, 50);
+}
 
 function gameLoop() {
   try {
-    // clear screen
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // moving square (IMPOSSIBLE to miss)
-    ctx.fillStyle = "lime";
-    ctx.fillRect(100, y, 100, 100);
-
-    y += 2;
-    if (y > canvas.height) y = 0;
-
+    update();
+    draw();
   } catch (e) {
-    console.error("CRASH:", e);
+    console.error("GAME ERROR:", e);
   }
 
   requestAnimationFrame(gameLoop);
 }
 
 gameLoop();
-
-console.log("RUNNING");
 </script>
 
 </body>
